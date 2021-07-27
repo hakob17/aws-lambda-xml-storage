@@ -8,20 +8,22 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import lombok.SneakyThrows;
+import org.apache.commons.io.FileUtils;
 
+import java.io.File;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -61,7 +63,6 @@ public class XmlHandler implements RequestHandler<XmlBody, String> {
                 .map(this::parse)
                 .flatMap(this::writeToDb)
                 .map(item -> writeToS3(body, item.asMap().get("id")))
-                .map(String::valueOf)
                 .orElse("");
     }
 
@@ -78,18 +79,23 @@ public class XmlHandler implements RequestHandler<XmlBody, String> {
                 });
     }
 
-    private PutObjectResult writeToS3(String object, Object id) {
+    @SneakyThrows
+    private String writeToS3(String object, Object id) {
         String bucketName = getEnvVariable("BUCKET_NAME");
 
         if(!s3client.doesBucketExistV2(bucketName)) {
             s3client.createBucket(bucketName);
         }
+        File file = File.createTempFile("tmp", ".xml");
+        FileUtils.writeByteArrayToFile(file, object.getBytes());
+        s3client.putObject(new PutObjectRequest(bucketName, id + ".xml", file)
+                .withCannedAcl(CannedAccessControlList.PublicRead));
+        file.delete();
+        return buildUrl(id, bucketName);
+    }
 
-        return s3client.putObject(
-                bucketName,
-                String.valueOf(id) + ".xml",
-                object
-        );
+    private String buildUrl(Object id, String bucketName) {
+        return "https://" + bucketName + ".s3." + Regions.US_EAST_2.getName() + ".amazonaws.com/" + id + ".xml";
     }
 
     private static String getEnvVariable(String bucket_name) {
