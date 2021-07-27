@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: An AWS Serverless Specification template describing your function.
+Resources:
+  storeXml:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: 'aws.lambda.xml.XmlHandler::handleRequest'
+      Runtime: java8
+      CodeUri: .
+      Description: ''
+      MemorySize: 512
+      Timeout: 15
+      Role: 'arn:aws:iam::506238167268:role/service-role/storeXml-role-evy9abi6'
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /storeXml
+            Method: POST
+        Api2:
+          Type: Api
+          Properties:
+            Path: /storeXml
+            Method: POST
+      Environment:
+        Variables:
+          ACCESS_KEY: AKIAXLXRFNDSC2QKJDHU
+          BUCKET_NAME: new-xml-bucket
+          DB_NAME: parsedXmlData
+          SECRET_KEY: TFBw324NbVYVKQLUsW84v+eyHOF37vmJK1MOyOAJ

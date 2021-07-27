@@ -1,0 +1,1 @@
+aws lambda update-function-code --function-name storeXml --zip-file fileb://target/aws-lambda-xml-storage-1.0-SNAPSHOT.jar
